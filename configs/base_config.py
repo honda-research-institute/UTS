@@ -14,8 +14,9 @@ class BaseConfig(object):
         self.annotation_root = os.path.join(self.DATA_ROOT, 'annotation/')
         self.result_root = os.path.join(self.DATA_ROOT, 'result/')
 
-#        self.session_list = load_session_list(os.path.join(self.DATA_ROOT, 'session_list'))
-        self.session_list = ['201704151140']    # for example
+        self.session_list = load_session_list(os.path.join(self.DATA_ROOT, 'session_list'))
+#        self.session_list = ['201704151140']    # for example
+#        self.session_list = ['201704141145']    # for example
 
 def load_session_list(path):
     with open(path, 'r') as fin:

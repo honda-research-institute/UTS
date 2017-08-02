@@ -71,7 +71,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argpars.ArgumentParser(description='Script for model training/testing')
+    parser = argparse.ArgumentParser(description='Script for model training/testing')
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--train', dest='train_stage', action='store_true',

@@ -32,6 +32,10 @@ class ClusterConfig(BaseConfig):
                        help='Whether to use PCA and the dimensions to keep')
         parser.add_argument('--method', dest='method', default='kmeans', type=str,
                        help='Method for clustering')
+        parser.add_argument('--D', dest='D', default=100, type=int,
+                       help='dimension for BoW')
+        parser.add_argument('--m', dest='m', default=100, type=int,
+                       help='change points for KTS')
 
 
         args = parser.parse_args()
@@ -51,5 +55,8 @@ class ClusterConfig(BaseConfig):
         self.PCA = args.PCA_dim
         self.method = args.method
         self.name = args.name+'_'+self.modality
+        self.D = args.D
+        self.m = args.m
 
-        self.test_list = ['201704151140']    # for example
+        #self.test_list = ['201704151140']    # for example
+        self.test_list = ['201704141145']    # for example

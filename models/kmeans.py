@@ -6,6 +6,7 @@ import pickle as pkl
 
 from sklearn.cluster import KMeans
 from scipy.stats import mode
+from sklearn.decomposition import PCA
 
 class KMeansModel():
 
@@ -32,21 +33,30 @@ class KMeansModel():
         end = time.time()
         print ("KMeans done! Clustering Time: %d secs" % (end-start))
 
-    def save_model(self, output_path, suffix=''):
+    def save_model(self, output_path, suffix=None):
 
         # save the model
-        pkl.dump(self.kmeans_model, open(os.path.join(output_path, 'kmeans_'+suffix+'.pkl'), 'w'))
+        if suffix is None:
+            pkl.dump({'kmeans': self.kmeans_model,
+                    'pca': self.pca_model},
+                    open(output_path, 'w'))
+        else:
+            pkl.dump({'kmeans': self.kmeans_model,
+                    'pca': self.pca_model},
+                    open(os.path.join(output_path, 'kmeans_'+suffix+'.pkl'), 'w'))
 
-        if self.PCA > 0:
-            pkl.dump(self.pca_model, open(os.path.join(output_path, 'pca_'+suffix+'.pkl'), 'w'))
 
-    def load_model(self, input_path, suffix=''):
+    def load_model(self, input_path, suffix=None):
 
         # load the model
-        self.kmeans_model = pkl.load(open(os.path.join(input_path, 'kmeans_'+suffix+'.pkl'), 'r'))
+        if suffix is None:
+            fin = pkl.load(open(input_path, 'r'))
+        else:
+            fin = pkl.load(open(os.path.join(input_path, 'kmeans_'+suffix+'.pkl'), 'r'))
 
-        if self.PCA > 0:
-            self.pca_model = pkl.load(open(os.path.join(input_path, 'pca_'+suffix+'.pkl'), 'r'))
+        self.kmeans_model = fin['kmeans']
+        self.pca_model = fin['pca']
+
 
     def predict(self, X):
         
@@ -63,4 +73,20 @@ class KMeansModel():
 
         return self.kmeans_model.predict(X)
 
+    def train_and_predict(self, X, K):
+        self.K = K
+
+        if self.PCA > 0:
+            print ("PCA to %d dims ..." % self.PCA)
+            self.pca_model = PCA(n_components = self.PCA)
+            X = self.pca_model.fit_transform(X)
+            print ("Explained variance ratio: ",
+                    np.sum(self.pca_model.explained_variance_ratio_))
+
+        print ("K-means clustering: %d data samples with dim=%d clustered to %d clusters" % 
+                (X.shape[0], X.shape[1], K))
+    
+        self.kmeans_model = KMeans(n_clusters=K, random_state=0).fit(X)
+
+        return self.kmeans_model.predict(X)
 
