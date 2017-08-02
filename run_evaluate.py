@@ -4,16 +4,24 @@ import numpy as np
 import argparse
 import pdb
 import time
+import sys
 
 from configs.base_config import BaseConfig
-import hungarian
+
 
 def main(args):
 
     cfg = BaseConfig()
 
     # load annotation file
-    gt = pickle.load(open(os.path.join(cfg.annotation_root, args.test_id+'/annotations.pkl'),'r'))
+    if args.gt_path is None:
+        if args.test_id is None:
+            print "Error: You need to specify the ground truth file or testing session id!"
+            return
+
+        gt_path = os.path.join(cfg.annotation_root, args.test_id+'/annotations.pkl')
+
+    gt = pickle.load(open(gt_path ,'r'))
     #temporary operation, join two labels
     gt = np.max(gt, axis=1)
 
@@ -22,30 +30,31 @@ def main(args):
     result = result[args.test_id]
 
     # compute the confusion matrix
-    C0 = genConMatrix(result, gt)
+    C0 = genConMatrix(gt, result)
 
-    # convert to minimum-cost assignment problem
-    ma = np.max(C0)
-    C2 = ma - C0
-    pdb.set_trace()
+    #C0 = C0.T
 
-    # run hungarian algorithm
-    start = time.time()
-    h = hungarian.HungarianSolver(C2.tolist())
-    h.solve()
-    end = time.time()
-    print ("Hungarian Time: %d secs" % (end-start))
+    # run hungarian algorithm (maximum assignment problem
+    sys.path.append(cfg.UTS_ROOT+'3rd-party/hungarian-algorithm')
+    from hungarian import Hungarian
 
-    ass = h.get_assignment()
-    P = np.zeros((np.max(result)+1, np.max(gt)+1))
+    h = Hungarian(C0.tolist(), is_profit_matrix=True)
+    h.calculate()
+
+    ass = h.get_results()
+    P = np.zeros((np.max(gt)+1, np.max(result)+1), dtype='int')
     for i in range(len(ass)):
-        P[i, ass] = 1
+        P[ass[i][0], ass[i][1]] = 1
+    print P
 
-    # normalization
-    C2 /= np.sum(C2)
+    # transfer the confusion matrix according to matching result
+    C = C0.dot( P.T )
 
-    C = C2 * P.T
-    acc = np.trace(C)
+    # calculate accuracy
+    C1 = C.astype(float)
+    C1 /= np.sum(C1)
+
+    acc = np.trace(C1)
 
     print "Acc: ", acc
 
@@ -53,7 +62,7 @@ def main(args):
     print C
 
 
-def genConMatrix(result, gt):
+def genConMatrix(gt, result):
     """
     Generate the confusion matrix of two segmentations
 
@@ -65,13 +74,13 @@ def genConMatrix(result, gt):
         C    -   the confusion matrix (class by class), size k1 x k2
     """
 
-    s1, G1 = convert_seg(result)
-    s2, G2 = convert_seg(gt)
+    s1, G1 = convert_seg(gt)
+    s2, G2 = convert_seg(result)
 
-    print "Number of segments of result: ", s1
-    print "Number of segments of gt: ", s2
+    print "Number of segments of gt: ", len(s1)
+    print "Number of segments of result: ", len(s2)
 
-    C = np.zeros((np.max(result)+1, np.max(gt)+1), dtype='int32')
+    C = np.zeros((np.max(gt)+1, np.max(result)+1), dtype='int32')
     for i in range(len(s1)-1):
         for j in range(len(s2)-1):
             a = max(s1[i], s2[j])
@@ -113,8 +122,9 @@ def convert_seg(seg, k=0):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for model training/testing')
 
-    parser.add_argument('--test_id', type=str, help='testing session id')
+    parser.add_argument('--test_id', type=str, default=None, help='testing session id')
     parser.add_argument('--result_path', help='path to the result file')
+    parser.add_argument('--gt_path', help='path to the gt file')
     parser.add_argument('--method', type=str, default='hungarian', help='evaulation method')
 
     args = parser.parse_args()

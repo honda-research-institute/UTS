@@ -58,5 +58,5 @@ class ClusterConfig(BaseConfig):
         self.D = args.D
         self.m = args.m
 
-        #self.test_list = ['201704151140']    # for example
-        self.test_list = ['201704141145']    # for example
+        self.test_list = ['201704151140']    # for example
+        #self.test_list = ['201704141145']    # for example
