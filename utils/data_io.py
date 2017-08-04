@@ -18,13 +18,14 @@ class CreateDataset(obj):
         self.Y, self.vid_Y = load_data_list(cfg, cfg.train_session, cfg.modality_Y)
         self.iter_mode = self.iter_mode
         self.shuffle = not cfg.no_shuffle
+        self.reverse = not cfg.no_reverse
         self.batch_size = cfg.batch_size
         self.max_time = cfg.max_time
 
     def get_iterator(self):
         if self.iter_mode == 'recon':
-            iterator = recon_minibatch2(self.X, self.vid_X, self.Y, 
-                    self.batch_size, self.max_time, self.shuffle)
+            iterator = recon_minibatch(self.X, self.vid_X, self.Y, 
+                    self.batch_size, self.max_time, self.shuffle, self.reverse)
         else:
             raise ValueError("Iter_mode %s not recognized" % self.iter_mode)
 

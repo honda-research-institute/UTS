@@ -17,15 +17,12 @@ class Seq2seqRecon(object):
         self.max_time = cfg.max_time
         self.n_input = cfg.n_input
         self.n_hidden = cfg.n_hidden
-        self.reverse = not cfg.no_reverse
         self.learning_rate = cfg.learning_rate
         self.optimizer_name = cfg.optimizer
 
         # define input and output
         self.x = tf.placeholder(tf.float32, (self.batch_size, self.max_time, self.n_input))
-        self.y = self.x
-        if reverse:
-            self.y = tf.reverse(self.y, axis=[1])
+        self.y = tf.placeholder(tf.float32, (self.batch_size, self.max_time, self.n_input))
         self.seq_len = tf.placeholder(tf.int32, (self.batch_size,))
 
         # define variables

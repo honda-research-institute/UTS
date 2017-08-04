@@ -38,7 +38,7 @@ def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
 
         yield temp_batch, seq_batch
 
-def recon_minibatch(x, vid=None, y=None, batch_size=0, n_steps=0, shuffle=False):
+def recon_minibatch(x, vid=None, y=None, batch_size=0, n_steps=0, shuffle=False, reverse=True):
     """
     Iterator for creating batch data for sequence to sequence reconstruction 
     (fixed sequence length)
@@ -72,6 +72,8 @@ def recon_minibatch(x, vid=None, y=None, batch_size=0, n_steps=0, shuffle=False)
             temp_x.append(np.expand_dims(x[excerpt + j, :], axis=1))    # add axis for n_step
             temp_y.append(np.expand_dims(y[excerpt + j, :], axis=1))    # add axis for n_step
 
+        if reverse:
+            temp_y = temp_y[::-1]
 
         yield np.concatenate(temp_x, axis=1), np.concatenate(temp_y, axis=1), seq_len
 
