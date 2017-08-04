@@ -9,51 +9,21 @@ class ClusterConfig(BaseConfig):
     def __init__(self):
         super(ClusterConfig, self).__init__()
 
+        self.parser.add_argument('--model', type=str, default='kmeans',
+                       help='Model name for clustering, e.g. kmeans | kts')
 
+        self.parser.add_argument('--isTrain', action='store_true',
+                help='Is training phase.')
+        self.parser.add_argument('--modality_X', type=str, default='camera',
+                help='Modality X: e.g. camera or can')
+        self.parser.add_argument('--feat_name', type=str, default='feats',
+                help='Feature name to use: feats | recon_camera')
 
-        group = parser.add_mutually_exclusive_group(required=True)
-        group.add_argument('--train', dest='train_stage', action='store_true',
-                       help='Training')
-        group.add_argument('--test', dest='train_stage', action='store_false',
-                       help='Testing')
-
-        group2 = parser.add_mutually_exclusive_group(required=True)
-        group2.add_argument('--can', dest='can', action='store_true',
-                       help='CANbus')
-        group2.add_argument('--camera', dest='camera', action='store_true',
-                       help='camera')
-
-        parser.add_argument('--K', dest='K', default=10, type=int,
-                       help='Number of clusters')
-        parser.add_argument('--PCA', dest='PCA_dim', default=0, type=int,
-                       help='Whether to use PCA and the dimensions to keep')
-        parser.add_argument('--method', dest='method', default='kmeans', type=str,
-                       help='Method for clustering')
-        parser.add_argument('--D', dest='D', default=100, type=int,
-                       help='dimension for BoW')
-        parser.add_argument('--m', dest='m', default=100, type=int,
-                       help='change points for KTS')
-
-
-        args = parser.parse_args()
-
-
-        if args.name == 'debug':
-            print "="*79
-            print "Warning!! You're using the debug name"
-            print "="*79
-
-        self.is_Train = args.train_stage
-        if args.can:
-            self.modality = 'can'
-        elif args.camera:
-            self.modality = 'camera'
-        self.K = args.K
-        self.PCA = args.PCA_dim
-        self.method = args.method
-        self.name = args.name+'_'+self.modality
-        self.D = args.D
-        self.m = args.m
-
-        self.test_list = ['201704151140']    # for example
-        #self.test_list = ['201704141145']    # for example
+        self.parser.add_argument('--K', type=int, default=10, 
+                help='Number of clusters')
+        self.parser.add_argument('--PCA_dim', type=int, default=0, 
+                help='Whether to use PCA and the dimensions to keep')
+        self.parser.add_argument('--D', type=int, default=100, 
+                help='dimension for BoW')
+        self.parser.add_argument('--m', type=int, default=100, 
+                help='Number of change points for KTS')

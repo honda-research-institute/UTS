@@ -8,11 +8,11 @@ class BaseConfig(object):
     def __init__(self):
         self.parser = argparse.ArgumentParser()
 
-        parser.add_argument('--name', type=str, default='debug',
+        self.parser.add_argument('--name', type=str, default='debug',
                         help='name of this experiment')
-        parser.add_argument('--train_session', type=str, default='all',
+        self.parser.add_argument('--train_session', type=str, default='all',
                 help='session id list for training, e.g. 201704151140,201704141145, use "all" for all sessions')
-        parser.add_argument('--test_session', type=str, default='all',
+        self.parser.add_argument('--test_session', type=str, default='all',
                 help='session id list for test, e.g. 201704151140,201704141145, use "all" for all sessions')
         self.parser.add_argument('--silent_mode', action='store_true',
                 help='Silent mode, no printing')
@@ -29,11 +29,11 @@ class BaseConfig(object):
         args.result_root = os.path.join(args.DATA_ROOT, 'result/')
 
         if args.train_session == 'all':
-            args.train_session = load_session_list(os.path.join(self.DATA_ROOT, 'session_list'))
+            args.train_session = load_session_list(os.path.join(args.DATA_ROOT, 'session_list'))
         else:
             args.train_session = args.train_session.split(',')
         if args.test_session == 'all':
-            args.test_session = load_session_list(os.path.join(self.DATA_ROOT, 'session_list'))
+            args.test_session = load_session_list(os.path.join(args.DATA_ROOT, 'session_list'))
         else:
             args.test_session = args.test_session.split(',')
 

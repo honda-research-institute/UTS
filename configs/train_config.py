@@ -24,7 +24,7 @@ class TrainConfig(BaseConfig):
                        help='If use no_reverse, the reconstruction sequence is not reversed')
         self.parser.add_argument('--no_shuffle', action='store_true',
                        help='If use no_shuffle, the data will not be shuffle when training')
-        self.parser.add_argument('--learning_rate', type=double, default=1e-4,
+        self.parser.add_argument('--learning_rate', type=float, default=1e-4,
                        help='Initial learning rate')
         self.parser.add_argument('--optimizer', type=str, default='rmsprop',
                        help='Optimizer used for training, e.g., rmsprop, adam')
@@ -42,3 +42,5 @@ class TrainConfig(BaseConfig):
                 help='The model snapshot used for feature extraction, -1 for the latest model')
         self.parser.add_argument('--n_epochs', type=int, default=10,
                 help='Number of epochs for training')
+        self.parser.add_argument('--iter_mode', type=str, default='recon',
+                help='Iteration mode: recon |')
