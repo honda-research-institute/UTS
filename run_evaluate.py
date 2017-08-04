@@ -6,28 +6,24 @@ import pdb
 import time
 import sys
 
-from configs.base_config import BaseConfig
+from configs.evaluate_config import EvaluateConfig
 
 
-def main(args):
+def main():
 
-    cfg = BaseConfig()
+    cfg = EvaluateConfig().parse()
+
+    test_id = cfg.test_session[0]
 
     # load annotation file
-    if args.gt_path is None:
-        if args.test_id is None:
-            print "Error: You need to specify the ground truth file or testing session id!"
-            return
-
-        gt_path = os.path.join(cfg.annotation_root, args.test_id+'/annotations.pkl')
-
+    gt_path = os.path.join(cfg.annotation_root, test_id+'/annotations.pkl')
     gt = pickle.load(open(gt_path ,'r'))
     #temporary operation, join two labels
     gt = np.max(gt, axis=1)
 
     # load result file
-    result = pickle.load(open(args.result_path, 'r'))
-    result = result[args.test_id]
+    result = pickle.load(open(cfg.result_path, 'r'))
+    result = result[test_id]
 
     # compute the confusion matrix
     C0 = genConMatrix(gt, result)
@@ -120,13 +116,4 @@ def convert_seg(seg, k=0):
     return s, G
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Script for model training/testing')
-
-    parser.add_argument('--test_id', type=str, default=None, help='testing session id')
-    parser.add_argument('--result_path', help='path to the result file')
-    parser.add_argument('--gt_path', help='path to the gt file')
-    parser.add_argument('--method', type=str, default='hungarian', help='evaulation method')
-
-    args = parser.parse_args()
-
-    main(args)
+    main()

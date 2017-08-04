@@ -9,6 +9,8 @@ def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
     x_batch.shape = [batch_size, n_step, dim]
     seq_batch.shape = (batch_size,)
     """
+    
+###### Need to be fixed ##########
 
     N, dim = x.shape
 
@@ -58,7 +60,7 @@ def recon_minibatch(x, vid=None, y=None, batch_size=0, n_steps=0, shuffle=False,
     valid = vid[n_steps:] == vid[:-n_steps]
     indices = np.where(valid)[0]
 
-    seq_len = n_step * np.ones((batch_size,), dtype='int32')
+    seq_len = n_steps * np.ones((batch_size,), dtype='int32')
 
     if shuffle:
         np.random.shuffle(indices)

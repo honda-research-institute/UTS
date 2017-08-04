@@ -13,35 +13,38 @@ import utils.data_io as data_io
 def main():
 
     # load default configuration
-    cfg = ClusterConfig()
+    cfg = ClusterConfig().parse()
     print cfg.name
 
-    if cfg.method == 'kmeans':
+    model = None
+
+    if cfg.model == 'kmeans':
 
         from models.kmeans import KMeansModel
         model = KMeansModel()
 
         # training stage
-        if cfg.is_Train:
+        if cfg.isTrain:
         
             # load data
             print ("Loading data ...")
-            data, _ = data_io.load_data_list(cfg)
+            data, _ = data_io.load_data_list(cfg, cfg.train_session, cfg.modality_X, cfg.feat_name)
 
             model.train(data, cfg.K)
             model.save_model(cfg.result_root, cfg.name) 
 
-        else:
+        # Testing stage
+        if model is None:
             model.load_model(cfg.result_root, cfg.name)
 
-            result = {}
-            for session_id in cfg.test_list:
-                data = data_io.load_data(cfg, session_id)
-                result[session_id] = model.predict(data)
+        result = {}
+        for session_id in cfg.test_session:
+            data = data_io.load_data(cfg, session_id, cfg.modality_X, cfg.feat_name)
+            result[session_id] = model.predict(data)
 
-            pkl.dump(result, open(os.path.join(cfg.result_root, 'result_'+cfg.name+'.pkl'), 'w'))
+        pkl.dump(result, open(os.path.join(cfg.result_root, 'result_'+cfg.name+'.pkl'), 'w'))
 
-    if cfg.method == 'kts':
+    if cfg.model == 'kts':
 
         from models.kts import KTSModel
         model = KTSModel(is_clustered=True, K=cfg.K, D=cfg.D)

@@ -4,7 +4,7 @@ import pickle as pkl
 import h5py
 from .utils import iterate_minibatch, recon_minibatch
 
-class CreateDataset(obj):
+class CreateDataset(object):
     """
     Build dataset
     """
@@ -12,15 +12,19 @@ class CreateDataset(obj):
     def __init__(self, cfg):
         print "Loading Data..."
         print "Modality X: %s, Modality Y: %s, Iteration mode: %s" % (cfg.modality_X,
-                cfg,modality_Y, cfg.iter_mode)
+                cfg.modality_Y, cfg.iter_mode)
 
         self.X, self.vid_X = load_data_list(cfg, cfg.train_session, cfg.modality_X)
         self.Y, self.vid_Y = load_data_list(cfg, cfg.train_session, cfg.modality_Y)
-        self.iter_mode = self.iter_mode
+        self.iter_mode = cfg.iter_mode
         self.shuffle = not cfg.no_shuffle
         self.reverse = not cfg.no_reverse
         self.batch_size = cfg.batch_size
         self.max_time = cfg.max_time
+
+        self.N = self.X.shape[0]
+        self.X_dim = self.X.shape[1]
+        self.Y_dim = self.Y.shape[1]
 
     def get_iterator(self):
         if self.iter_mode == 'recon':
@@ -44,7 +48,7 @@ def save_feat(data, cfg, session_id, name=None):
         pkl.dump(data, open(path.join(cfg.sensor_root, "{0}/{1}.pkl").format(session_id, name), 'w'))
     
     if cfg.modality_X == 'camera':
-        with h5py.File(path.join(cfg.video_root, "{0}/{1}.pkl").format(session_id, name), 'w') as fout:
+        with h5py.File(path.join(cfg.video_root, "{0}/{1}.h5").format(session_id, name), 'w') as fout:
             fout.create_dataset('feats', data=data, dtype='float32')
 
 
