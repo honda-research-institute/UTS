@@ -9,8 +9,6 @@ def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
     x_batch.shape = [batch_size, n_step, dim]
     seq_batch.shape = (batch_size,)
     """
-    import warnings
-    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
     N, dim = x.shape
 
@@ -30,7 +28,9 @@ def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
         for j in range(n_steps):
             # "clever" way to get length
             valid = (excerpt+j) < N
-            seq_batch[valid, j] = 1
+            valid_pad = np.zeros((batch_size,),dtype=bool)
+            valid_pad[:length] = valid
+            seq_batch[valid_pad, j] = 1
 
             temp_batch[:length, j, :] = x[excerpt+j, :]
 
