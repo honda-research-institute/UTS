@@ -9,10 +9,7 @@ class ClusterConfig(BaseConfig):
     def __init__(self):
         super(ClusterConfig, self).__init__()
 
-        parser = argparse.ArgumentParser()
 
-        parser.add_argument('--name', type=str, default='debug',
-                        help='name of this experiment')
 
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument('--train', dest='train_stage', action='store_true',

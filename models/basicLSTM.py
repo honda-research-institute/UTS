@@ -1,10 +1,10 @@
 import tensorflow as tf
 
+
+class basicLSTM(object):
 '''
 Basic LSTM for next timestamp prediction
 '''
-
-class basicLSTM():
     def __init__(self, batch_size, n_steps, n_input, n_hidden, n_output=None):
 
         self.batch_size = batch_size
