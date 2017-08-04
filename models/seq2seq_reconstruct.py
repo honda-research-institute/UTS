@@ -44,7 +44,9 @@ class Seq2seqRecon(object):
         encoder_outputs, encoder_final_state = tf.nn.dynamic_rnn(
                 encoder_cell, self.x, self.seq_len, dtype=tf.float32)
 
-        self.feat = encoder_outputs[-1]
+        # slice the valid output
+        indices = tf.stack([tf.range(self.batch_size), self.seq_len-1], axis=1)
+        self.feat = tf.gather_nd(encoder_outputs, indices)
 
         # Decoder
         # based on raw_rnn (see official reference)

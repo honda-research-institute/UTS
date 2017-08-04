@@ -1,4 +1,3 @@
-from models.kmeans import KMeansModel
 import numpy as np
 
 def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
@@ -8,10 +7,15 @@ def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
 
     return shape:
     x_batch.shape = [batch_size, n_step, dim]
-    seq_len.shape = (batch_size,)
+    seq_batch.shape = (batch_size,)
     """
+    import warnings
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
     N, dim = x.shape
+
+    # for convenient implementation of the boundary case
+    x = np.vstack((x, np.zeros((n_steps-1,dim),dtype=x.dtype)))
 
     indices = np.arange(N)
     if shuffle:
@@ -22,11 +26,15 @@ def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
         excerpt = indices[i: i+length]
 
         temp_batch = np.zeros((batch_size, n_steps, dim), dtype=x.dtype)
-        seq_batch = np.zeros((batch_size,), dtype='int32')
+        seq_batch = np.zeros((batch_size, n_steps), dtype='int32')
         for j in range(n_steps):
+            # "clever" way to get length
+            valid = (excerpt+j) < N
+            seq_batch[valid, j] = 1
+
             temp_batch[:length, j, :] = x[excerpt+j, :]
 
-        seq_batch[:length] = n_steps
+        seq_batch = np.sum(seq_batch, axis=1)
 
         yield temp_batch, seq_batch
 
@@ -124,6 +132,7 @@ class BoWModel():
         
         if self.model is None:
             # Build dictionary for BoW from scratch using X
+            from models.kmeans import KMeansModel
             model = KMeansModel()
             model.train(X, self.D)
         else:
