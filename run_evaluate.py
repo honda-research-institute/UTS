@@ -46,13 +46,25 @@ def main():
     # transfer the confusion matrix according to matching result
     C = C0.dot( P.T )
 
-    # calculate accuracy
-    C1 = C.astype(float)
-    C1 /= np.sum(C1)
+    f1 = []
+    for i in range(C.shape[0]):
+        c = C[i]
+        if c[i] == 0:
+            f1.append(0)
+        else:
+            precision = float(c[i]) / np.sum(C[:,i])
+            recall = float(c[i]) / np.sum(c)
+            f1.append(2*precision*recall / (precision+recall))
 
-    acc = np.trace(C1)
+    print "Avg F1-score: %f" % np.mean(np.vstack(f1))
+    print "F1-score:"
+    print f1
 
-    print "Acc: ", acc
+#    # calculate accuracy
+#    C1 = C.astype(float)
+#    C1 /= np.sum(C1)
+#    acc = np.trace(C1)
+#    print "Acc: ", acc
 
     print "Confusion matrix after matching:"
     print C
