@@ -25,26 +25,17 @@ class KTSModel():
             self.bow_model = kwargs.get('bow_model', None)
             self.cluster_model = kwargs.get('cluster_model', None)
 
-    def save_model(self, output_path, suffix=None):
+    def save_model(self, output_path):
 
         # save the model
-        if suffix is None:
-            pkl.dump({'kts': self.kts_model,
-                    'pca': self.pca_model},
-                    open(output_path, 'w'))
-        else:
-            pkl.dump({'kmeans': self.kts_model,
-                    'pca': self.pca_model},
-                    open(os.path.join(output_path, 'kts_'+suffix+'.pkl'), 'w'))
+        pkl.dump({'kts': self.kmeans_model,
+                'pca': self.pca_model},
+                open(output_path+'kts_model.pkl', 'w'))
 
-
-    def load_model(self, input_path, suffix=None):
+    def load_model(self, input_path):
 
         # load the model
-        if suffix is None:
-            fin = pkl.load(open(input_path, 'r'))
-        else:
-            fin = pkl.load(open(os.path.join(input_path, 'kts_'+suffix+'.pkl'), 'r'))
+        fin = pkl.load(open(input_path+'kmeans_model.pkl', 'r'))
 
         self.kts_model = fin['kts']
         self.pca_model = fin['pca']
@@ -86,7 +77,6 @@ class KTSModel():
         K = np.dot(X, X.T)
         cps, _ = cpd_auto(K, 2*m, 1) 
 
-        label = None
         if self.is_clustered:
 
             ################ Feature aggregation ################
@@ -122,6 +112,13 @@ class KTSModel():
 
             for i in range(1, len(cps)):
                 new_label[cps[i-1]:cps[i]] = label[i-1]
+
+        else:
+            # if not cluster it, then just assign distinct numbers
+            new_label = np.zeros(X.shape[0], dtype=int)
+            cps = [0] + cps.tolist() + [X.shape[0]]
+            for i in range(1, len(cps)):
+                new_label[cps[i-1]:cps[i]] = i - 1
 
         return cps, new_label
 

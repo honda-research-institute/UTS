@@ -11,3 +11,5 @@ class EvaluateConfig(BaseConfig):
 
         self.parser.add_argument('--result_path', help='path to the result file')
         self.parser.add_argument('--method', help='hungarian')
+        self.parser.add_argument('--save_result', action='store_true',
+                help='Whether to save label matching result')

@@ -21,11 +21,13 @@ def main():
     print cfg.name
 
     model = create_model(cfg)
+    model.print_config()
 
     result_path = os.path.join(cfg.result_root, cfg.name)
 
     if cfg.isTrain:
         dataset = CreateDataset(cfg)
+        dataset.print_config()
 
         with tf.Session() as sess:
     
@@ -42,12 +44,13 @@ def main():
             for epoch in range(1, cfg.n_epochs+1):
     
                 iterator = dataset.get_iterator()    # reinitialize iterator
-                for x_batch, y_batch, seq_batch in iterator:
+                for batch in iterator:
     
                     train_loss, _ = sess.run([model.loss, model.optimizer], feed_dict={
-                                            model.x: x_batch,
-                                            model.y: y_batch,
-                                            model.seq_len: seq_batch})
+                                            model.x: batch['x_batch'],
+                                            model.y: batch['y_batch'],
+                                            model.in_len: batch['in_len'],
+                                            model.out_len: batch['out_len']})
     
                     summary = tf.Summary(value=[tf.Summary.Value(tag="train_loss",
                                                                 simple_value=train_loss),])
@@ -65,33 +68,34 @@ def main():
                 pbar.close()
                 print ("Training model done!")
             
-    # extract features using pretrained model
-    with tf.Session() as sess:
-
-        saver = tf.train.Saver()
-        if cfg.snapshot_num == -1:
-            saver.restore(sess, tf.train.latest_checkpoint(result_path))
-        else:
-            raise NotImplementedError
-
-        for session_id in cfg.test_session:
-            print "Session: ", session_id
-            x = load_data(cfg, session_id, cfg.modality_X)
-
-            feat = []
-            for x_batch, seq_batch in iterate_minibatch(x, cfg.batch_size, cfg.max_time, shuffle=False):
-                feat_batch = sess.run(model.feat, feed_dict={
-                                model.x: x_batch,
-                                model.seq_len: seq_batch})
-                feat.append(feat_batch[seq_batch > 0, :])
-
-
-            new_feat = np.vstack(feat)
-
-            save_feat(new_feat, cfg, session_id)
-
-        if not cfg.silent_mode:
-            print ("Feature extraction done!")
+    else:
+        # extract features using pretrained model
+        with tf.Session() as sess:
+    
+            saver = tf.train.Saver()
+            if cfg.snapshot_num == -1:
+                saver.restore(sess, tf.train.latest_checkpoint(result_path))
+            else:
+                raise NotImplementedError
+    
+            for session_id in cfg.test_session:
+                print "Session: ", session_id
+                x = load_data(cfg, session_id, cfg.modality_X)
+    
+                feat = []
+                for batch in iterate_minibatch(x, cfg.batch_size, cfg.max_time, shuffle=False):
+                    feat_batch = sess.run(model.feat, feed_dict={
+                                    model.x: batch['x_batch'],
+                                    model.in_len: batch['seq_batch']})
+                    feat.append(feat_batch[seq_batch > 0, :])
+    
+    
+                new_feat = np.vstack(feat)
+    
+                save_feat(new_feat, cfg, session_id)
+    
+            if not cfg.silent_mode:
+                print ("Feature extraction done!")
 
 
 if __name__ == "__main__":

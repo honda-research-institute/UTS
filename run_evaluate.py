@@ -7,125 +7,103 @@ import time
 import sys
 
 from configs.evaluate_config import EvaluateConfig
+from utils.utils import convert_seg, genConMatrix
 
 
 def main():
 
     cfg = EvaluateConfig().parse()
 
-    test_id = cfg.test_session[0]
-
-    # load annotation file
-    gt_path = os.path.join(cfg.annotation_root, test_id+'/annotations.pkl')
-    gt = pickle.load(open(gt_path ,'r'))
-    #temporary operation, join two labels
-    gt = np.max(gt, axis=1)
-
     # load result file
-    result = pickle.load(open(cfg.result_path, 'r'))
-    result = result[test_id]
+    if cfg.result_path is None:
+        result_path = os.path.join(cfg.result_root, cfg.name+'/result.pkl')
+    else:
+        result_path = cfg.result_path
+    result_dict = pickle.load(open(result_path, 'r'))
+    
+    if cfg.save_result:
+        new_result_dict = {}
+        new_seg_dict = {}
+    
+    for test_id in result_dict.keys():
+        if not cfg.silent_mode:
+            print "Evaluating ", test_id
 
-    # compute the confusion matrix
-    C0 = genConMatrix(gt, result)
+        # load annotation file
+        gt_path = os.path.join(cfg.annotation_root, test_id+'/annotations.pkl')
+        gt = pickle.load(open(gt_path ,'r'))
+        #temporary operation, join two labels
+        gt = np.max(gt, axis=1)
+    
+        result = result_dict[test_id]
+    
+        # compute the confusion matrix
+        C0 = genConMatrix(gt, result)
+    
+        # run hungarian algorithm (maximum assignment problem
+        sys.path.append(cfg.UTS_ROOT+'3rd-party/hungarian-algorithm')
+        from hungarian import Hungarian
+    
+        h = Hungarian(C0.tolist(), is_profit_matrix=True)
+        h.calculate()
+    
+        ass = h.get_results()
+        P = np.zeros((np.max(gt)+1, np.max(result)+1), dtype='int')
+        for i in range(len(ass)):
+            P[ass[i][0], ass[i][1]] = 1
 
-    #C0 = C0.T
+        if not cfg.silent_mode:
+            print P
+    
+        # transfer the confusion matrix according to matching result
+        C = C0.dot( P.T )
+    
+        pdb.set_trace()
+        if cfg.save_result:
+            # save transformed result
+            label_map = {}
+            for i in range(len(ass)):
+                label_map[ass[i][1]] = ass[i][0]
+    
+            for i in range(len(result)):
+                result[i] = label_map[result[i]]
 
-    # run hungarian algorithm (maximum assignment problem
-    sys.path.append(cfg.UTS_ROOT+'3rd-party/hungarian-algorithm')
-    from hungarian import Hungarian
+            new_result_dict[test_id] = result
+            s, G = convert_seg(result)
+            new_seg_dict[test_id] = {}
+            new_seg_dict[test_id]['s'] = s
+            new_seg_dict[test_id]['G'] = G
+    
+    
+        # Evaluation
+        f1 = []
+        for i in range(C.shape[0]):
+            c = C[i]
+            if c[i] == 0:
+                f1.append(0)
+            else:
+                precision = float(c[i]) / np.sum(C[:,i])
+                recall = float(c[i]) / np.sum(c)
+                f1.append(2*precision*recall / (precision+recall))
+    
+        if not cfg.silent_mode:
+            print "Avg F1-score: %f" % np.mean(np.vstack(f1))
+            print "F1-score:"
+            print f1
 
-    h = Hungarian(C0.tolist(), is_profit_matrix=True)
-    h.calculate()
-
-    ass = h.get_results()
-    P = np.zeros((np.max(gt)+1, np.max(result)+1), dtype='int')
-    for i in range(len(ass)):
-        P[ass[i][0], ass[i][1]] = 1
-    print P
-
-    # transfer the confusion matrix according to matching result
-    C = C0.dot( P.T )
-
-    f1 = []
-    for i in range(C.shape[0]):
-        c = C[i]
-        if c[i] == 0:
-            f1.append(0)
-        else:
-            precision = float(c[i]) / np.sum(C[:,i])
-            recall = float(c[i]) / np.sum(c)
-            f1.append(2*precision*recall / (precision+recall))
-
-    print "Avg F1-score: %f" % np.mean(np.vstack(f1))
-    print "F1-score:"
-    print f1
-
-#    # calculate accuracy
-#    C1 = C.astype(float)
-#    C1 /= np.sum(C1)
-#    acc = np.trace(C1)
-#    print "Acc: ", acc
-
-    print "Confusion matrix after matching:"
-    print C
-
-
-def genConMatrix(gt, result):
-    """
-    Generate the confusion matrix of two segmentations
-
-    Input
-        gt   -   ground truth segmentation, vector with size N
-        result - cluster result segmentation, vector with size N
-
-    Output
-        C    -   the confusion matrix (class by class), size k1 x k2
-    """
-
-    s1, G1 = convert_seg(gt)
-    s2, G2 = convert_seg(result)
-
-    print "Number of segments of gt: ", len(s1)
-    print "Number of segments of result: ", len(s2)
-
-    C = np.zeros((np.max(gt)+1, np.max(result)+1), dtype='int32')
-    for i in range(len(s1)-1):
-        for j in range(len(s2)-1):
-            a = max(s1[i], s2[j])
-            b = min(s1[i+1], s2[j+1])
-
-            if a < b:
-                C[G1[i], G2[j]] += b - a
-
-    return C
+    if cfg.save_result:
+        pickle.dump(new_result_dict, open(result_path.replace('.pkl', '_hungarian.pkl'),'w'))
+        pickle.dump(new_seg_dict, open(result_path.replace('.pkl', '_seg_hungarian.pkl'),'w'))
+    
+    #    # calculate accuracy
+    #    C1 = C.astype(float)
+    #    C1 /= np.sum(C1)
+    #    acc = np.trace(C1)
+    #    print "Acc: ", acc
+    
 
 
-def convert_seg(seg, k=0):
-    """
-    Convert original segmentation vector
 
-    Input
-        seg    -   original segmentation vector with size N
-
-    Output
-        s  -  starting position of each segment, list with size m+1, m is the number of segment
-        G  -  label of each segment, list with size m 
-    """
-
-    if k == 0:
-        k = np.max(seg) + 1
-
-    N = seg.shape[0]
-
-    s = [0]
-    G = [seg[0]]
-    for i in range(1, N):
-        if not seg[i] == seg[i-1]:
-            s.append(i)
-            G.append(seg[i])
-    s.append(N)
-
-    return s, G
 
 if __name__ == '__main__':
     main()

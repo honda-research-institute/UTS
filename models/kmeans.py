@@ -14,6 +14,7 @@ class KMeansModel():
         self.PCA = PCA
         self.kmeans_model = None
         self.pca_model = None
+        self.feasibility = False    # flag for whether model is trained
 
     def train(self, X, K):
         self.K = K
@@ -31,31 +32,26 @@ class KMeansModel():
         start = time.time()
         self.kmeans_model = KMeans(n_clusters=K, random_state=0).fit(X)
         end = time.time()
+
+        self.feasibility = True
         print ("KMeans done! Clustering Time: %d secs" % (end-start))
 
-    def save_model(self, output_path, suffix=None):
+    def save_model(self, output_path):
 
         # save the model
-        if suffix is None:
-            pkl.dump({'kmeans': self.kmeans_model,
-                    'pca': self.pca_model},
-                    open(output_path, 'w'))
-        else:
-            pkl.dump({'kmeans': self.kmeans_model,
-                    'pca': self.pca_model},
-                    open(os.path.join(output_path, 'kmeans_'+suffix+'.pkl'), 'w'))
+        pkl.dump({'kmeans': self.kmeans_model,
+                'pca': self.pca_model},
+                open(output_path+'kmeans_model.pkl', 'w'))
 
 
-    def load_model(self, input_path, suffix=None):
+    def load_model(self, input_path):
 
         # load the model
-        if suffix is None:
-            fin = pkl.load(open(input_path, 'r'))
-        else:
-            fin = pkl.load(open(os.path.join(input_path, 'kmeans_'+suffix+'.pkl'), 'r'))
+        fin = pkl.load(open(input_path+'kmeans_model.pkl', 'r'))
 
         self.kmeans_model = fin['kmeans']
         self.pca_model = fin['pca']
+        self.feasibility = True
 
 
     def predict(self, X):

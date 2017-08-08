@@ -10,3 +10,5 @@ python run_clustering.py --name $name --model $model --train_session 20170415114
     --test_session 201704151140 --feat_name $feat_name \
     --modality_X camera --K 18 \
     --isTrain
+
+python run_evaluate.py --name $name --save_result

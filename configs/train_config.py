@@ -28,9 +28,9 @@ class TrainConfig(BaseConfig):
                        help='Initial learning rate')
         self.parser.add_argument('--optimizer', type=str, default='rmsprop',
                        help='Optimizer used for training, e.g., rmsprop, adam')
-        self.parser.add_argument('--n_input', type=int, default=1536,
+        self.parser.add_argument('--n_input', type=int, default=0,
                        help='The dimension of input feature')
-        self.parser.add_argument('--n_output', type=int, default=8,
+        self.parser.add_argument('--n_output', type=int, default=0,
                        help='The dimension of output feature')
         self.parser.add_argument('--modality_X', type=str, default='camera',
                 help='Modality X: e.g. camera or can')
@@ -43,4 +43,4 @@ class TrainConfig(BaseConfig):
         self.parser.add_argument('--n_epochs', type=int, default=10,
                 help='Number of epochs for training')
         self.parser.add_argument('--iter_mode', type=str, default='recon',
-                help='Iteration mode: recon |')
+                help='Iteration mode: recon | pred')

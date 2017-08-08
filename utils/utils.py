@@ -38,7 +38,7 @@ def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
 
         seq_batch = np.sum(seq_batch, axis=1)
 
-        yield temp_batch, seq_batch
+        yield {'x_batch': temp_batch, 'seq_batch':seq_batch}
 
 def recon_minibatch(x, vid=None, y=None, batch_size=0, n_steps=0, shuffle=False, reverse=True):
     """
@@ -77,12 +77,15 @@ def recon_minibatch(x, vid=None, y=None, batch_size=0, n_steps=0, shuffle=False,
         if reverse:
             temp_y = temp_y[::-1]
 
-        yield np.concatenate(temp_x, axis=1), np.concatenate(temp_y, axis=1), seq_len
+        yield {'x_batch': np.concatenate(temp_x, axis=1), 
+               'y_batch': np.concatenate(temp_y, axis=1), 
+               'in_len': seq_len,
+               'out_len': seq_len}
 
-def fixlength_minibatch(x, y=None, vid=None, batch_size=8, n_steps=0, n_predict=0, shuffle=False):
+def pred_minibatch(x, vid=None, y=None, batch_size=8, n_steps=0, n_predict=0, shuffle=False):
     """
-    Iterator for creating fix-length batch data for sequence to sequence tasks
-    x.shape = [N, dim]
+    Iterator for creating batch data for sequence to sequence prediction
+    (fixed sequence length)
 
     return shape:
     x_batch.shape = [batch_size, n_step, dim]
@@ -97,9 +100,13 @@ def fixlength_minibatch(x, y=None, vid=None, batch_size=8, n_steps=0, n_predict=
         raise ValueError("Sequence length cannot be 0!")
     if n_predict == 0:
         n_predict = n_steps
+    assert(n_predict <= n_steps)
     
     valid = vid[n_steps+n_predict:] == vid[:-n_steps-n_predict]
     indices = np.where(valid)[0]
+
+    in_len = n_steps * np.ones((batch_size,), dtype='int32')
+    out_len = n_predict * np.ones((batch_size,), dtype='int32')
 
     if shuffle:
         np.random.shuffle(indices)
@@ -115,7 +122,10 @@ def fixlength_minibatch(x, y=None, vid=None, batch_size=8, n_steps=0, n_predict=
         for j in range(n_steps, n_steps+n_predict):
             temp2.append(np.expand_dims(y[excerpt + j, :], axis=1))    # add axis for n_predict
 
-        yield np.concatenate(temp, axis=1), np.concatenate(temp2, axis=1)
+        yield {'x_batch': np.concatenate(temp, axis=1), 
+               'y_batch': np.concatenate(temp2, axis=1), 
+               'in_len': in_len,
+               'out_len': out_len}
 
 
 class BoWModel():
@@ -153,3 +163,59 @@ class BoWModel():
                 bow[i-1, label[j]] += 1
 
         return bow
+
+def convert_seg(seg, k=0):
+    """
+    Convert original segmentation vector
+
+    Input
+        seg    -   original segmentation vector with size N
+
+    Output
+        s  -  starting position of each segment, list with size m+1, m is the number of segment
+        G  -  label of each segment, list with size m 
+    """
+
+    if k == 0:
+        k = np.max(seg) + 1
+
+    N = seg.shape[0]
+
+    s = [0]
+    G = [seg[0]]
+    for i in range(1, N):
+        if not seg[i] == seg[i-1]:
+            s.append(i)
+            G.append(seg[i])
+    s.append(N)
+
+    return s, G
+
+def genConMatrix(gt, result):
+    """
+    Generate the confusion matrix of two segmentations
+
+    Input
+        gt   -   ground truth segmentation, vector with size N
+        result - cluster result segmentation, vector with size N
+
+    Output
+        C    -   the confusion matrix (class by class), size k1 x k2
+    """
+
+    s1, G1 = convert_seg(gt)
+    s2, G2 = convert_seg(result)
+
+    print "Number of segments of gt: ", len(s1)
+    print "Number of segments of result: ", len(s2)
+
+    C = np.zeros((np.max(gt)+1, np.max(result)+1), dtype='int32')
+    for i in range(len(s1)-1):
+        for j in range(len(s2)-1):
+            a = max(s1[i], s2[j])
+            b = min(s1[i+1], s2[j+1])
+
+            if a < b:
+                C[G1[i], G2[j]] += b - a
+
+    return C

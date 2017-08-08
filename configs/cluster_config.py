@@ -23,6 +23,10 @@ class ClusterConfig(BaseConfig):
                 help='Number of clusters')
         self.parser.add_argument('--PCA_dim', type=int, default=0, 
                 help='Whether to use PCA and the dimensions to keep')
+
+        # for kts
+        self.parser.add_argument('--is_clustered', action='store_true',
+                help='Whether to perform clustering after KTS')
         self.parser.add_argument('--D', type=int, default=100, 
                 help='dimension for BoW')
         self.parser.add_argument('--m', type=int, default=100, 
