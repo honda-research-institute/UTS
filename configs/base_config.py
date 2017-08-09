@@ -24,16 +24,16 @@ class BaseConfig(object):
         args.DATA_ROOT = '/home/xyang/UTS/Data'
         
         args.video_root = os.path.join(args.DATA_ROOT, 'camera/')
-        args.sensor_root = os.path.join(args.DATA_ROOT, 'general_sensors/')
+        args.sensor_root = os.path.join(args.DATA_ROOT, 'sensor/')
         args.annotation_root = os.path.join(args.DATA_ROOT, 'annotation/')
         args.result_root = os.path.join(args.DATA_ROOT, 'result/')
 
         if args.train_session == 'all':
-            args.train_session = load_session_list(os.path.join(args.DATA_ROOT, 'session_list'))
+            args.train_session = load_session_list(os.path.join(args.DATA_ROOT, 'session_list.txt'))
         else:
             args.train_session = args.train_session.split(',')
         if args.test_session == 'all':
-            args.test_session = load_session_list(os.path.join(args.DATA_ROOT, 'session_list'))
+            args.test_session = load_session_list(os.path.join(args.DATA_ROOT, 'test_session.txt'))
         else:
             args.test_session = args.test_session.split(',')
 
@@ -42,6 +42,6 @@ class BaseConfig(object):
 def load_session_list(path):
     with open(path, 'r') as fin:
         session_ids = fin.read().strip().split('\n')
-        session_ids = [''.join(s.split('-')[:-1]) for s in session_ids]
+#        session_ids = [''.join(s.split('-')[:-1]) for s in session_ids]
 
     return session_ids
