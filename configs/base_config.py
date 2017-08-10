@@ -30,6 +30,8 @@ class BaseConfig(object):
 
         if args.train_session == 'all':
             args.train_session = load_session_list(os.path.join(args.DATA_ROOT, 'session_list.txt'))
+        elif args.train_session[-3:] == 'txt':
+            args.train_session = load_session_list(os.path.join(args.DATA_ROOT, args.train_session))
         else:
             args.train_session = args.train_session.split(',')
         if args.test_session == 'all':

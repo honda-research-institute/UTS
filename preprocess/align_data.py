@@ -10,6 +10,7 @@ import numpy as np
 import pdb
 from scipy import signal
 import h5py
+from PIL import Image
 
 sys.path.append("../configs")
 from base_config import BaseConfig
@@ -34,21 +35,38 @@ class DataAlign(object):
         video_filename = session_folder + "camera/center/png_timestamp.csv"
 
         accel_data = pd.read_csv(accel_filename)
-        video_data = pd.read_csv(video_filename)
+        video_data = self.read_video_csv(video_filename)
 
-        # for accel start point, set as roughly 10 seconds (3000 lines) before first movement
+        # for start point, set as roughly 10 seconds (300 lines for video file) before first movement (accel > 0)
         accel_start_index = accel_data[accel_data["pedalangle(percent)"]>0].index[0]
-        accel_start_index = max(0, accel_start_index - 3000)
-
         accel_start = accel_data.iloc[accel_start_index]['unix_timestamp']
-        accel_end = accel_data.iloc[-1]['unix_timestamp']
-        video_start = video_data.iloc[0]['unix_timestamp']
+        video_start_index = (video_data['unix_timestamp']-accel_start).abs().argmin()
+        video_start_index = max(0, video_start_index - 300)
+
+        video_start = video_data.iloc[video_start_index]['unix_timestamp']
+        accel_start = accel_data.iloc[0]['unix_timestamp']
+
         video_end = video_data.iloc[-1]['unix_timestamp']
+        accel_end = accel_data.iloc[-1]['unix_timestamp']
 
         start_time = max(video_start, accel_start)
         end_time = min(video_end, accel_end)
 
         return start_time, end_time
+
+    def read_video_csv(self, video_filename):
+        """  deal with weird files """
+
+        video_data = pd.read_csv(video_filename)
+        if not video_data['filename'][0] == 'camera/center/png/000000.png':
+            video_data = pd.read_csv(video_filename, usecols=[0, 1, 3])
+        if not video_data['filename'][0] == 'camera/center/png/000000.png':
+            video_data = pd.read_csv(video_filename, usecols=[0, 1, 2])
+
+        assert(video_data['# timestamp'].dtype == 'float')
+        assert(video_data['unix_timestamp'].dtype == 'float')
+        assert(video_data['filename'][0] == 'camera/center/png/000000.png')
+        return video_data
 
     def get_index(self, dataframe, time):
         """
@@ -177,7 +195,13 @@ class DataAlign(object):
                                                     session_id[6:8],
                                                     session_id)
         video_filename = session_folder + "camera/center/png_timestamp.csv"
-        video_data = pd.read_csv(video_filename)
+        video_data = self.read_video_csv(video_filename)
+        if not video_data['filename'][0] == 'camera/center/png/000000.png':
+            # deal with weird files
+            video_data = pd.read_csv(video_filename, usecols=[0, 1, 3])
+            assert(video_data['# timestamp'].dtype == 'float')
+            assert(video_data['unix_timestamp'].dtype == 'float')
+            assert(video_data['filename'][0] == 'camera/center/png/000000.png')
 
         # load actual frames
         frames_name = glob.glob(self.cfg.DATA_ROOT+'/frames/'+session_id+'/*jpg')
@@ -193,21 +217,31 @@ class DataAlign(object):
         end_frame = end_frame / 10    # 3 fps
         end_frame = min(end_frame+1, len(frames_name))
 
-        feat_conv, feat_fc, prob = self.extract_feat(frames_name[start_frame:end_frame])
-        feat_conv = feat_conv[:(end_frame-start_frame)]
+        feat_fc = self.extract_feat(frames_name[start_frame:end_frame])
         feat_fc = feat_fc[:(end_frame-start_frame)]
-        prob = prob[:(end_frame-start_frame)]
 
         if not os.path.isdir(self.cfg.video_root+session_id):
             os.makedirs(self.cfg.video_root+session_id)
-        with h5py.File(self.cfg.video_root+session_id+'/feat_conv.h5', 'w') as fout:
-            fout.create_dataset("feats", data=feat_conv, dtype='float32')
         with h5py.File(self.cfg.video_root+session_id+'/feat_fc.h5', 'w') as fout:
             fout.create_dataset("feats", data=feat_fc, dtype='float32')
-        with h5py.File(self.cfg.video_root+session_id+'/probs.h5', 'w') as fout:
-            fout.create_dataset("feats", data=prob, dtype='float32')
 
-        return feat_conv.shape[0]
+        self.create_video(session_id, frames_name[start_frame:end_frame])
+
+#        feat_conv, feat_fc, prob = self.extract_feat(frames_name[start_frame:end_frame])
+#        feat_conv = feat_conv[:(end_frame-start_frame)]
+#        feat_fc = feat_fc[:(end_frame-start_frame)]
+#        prob = prob[:(end_frame-start_frame)]
+#
+#        if not os.path.isdir(self.cfg.video_root+session_id):
+#            os.makedirs(self.cfg.video_root+session_id)
+#        with h5py.File(self.cfg.video_root+session_id+'/feat_conv.h5', 'w') as fout:
+#            fout.create_dataset("feats", data=feat_conv, dtype='float32')
+#        with h5py.File(self.cfg.video_root+session_id+'/feat_fc.h5', 'w') as fout:
+#            fout.create_dataset("feats", data=feat_fc, dtype='float32')
+#        with h5py.File(self.cfg.video_root+session_id+'/probs.h5', 'w') as fout:
+#            fout.create_dataset("feats", data=prob, dtype='float32')
+
+        return feat_fc.shape[0]
 
     def extract_feat(self, frames_name):
         """
@@ -219,10 +253,9 @@ class DataAlign(object):
         slim_dir = "/home/xyang/anaconda2/lib/python2.7/site-packages/tensorflow/models/slim"
         checkpoints_dir = slim_dir + "/pretrained_models"
         checkpoints_file = checkpoints_dir + '/inception_resnet_v2_2016_08_30.ckpt'
-        batch_size = 64
+        batch_size = 128
 
         sys.path.append(slim_dir)
-        from PIL import Image
         from nets import inception
         import tensorflow as tf
         slim = tf.contrib.slim
@@ -261,18 +294,42 @@ class DataAlign(object):
                         img = Image.open(frames_name[i+j]).convert('RGB')
                         current_batch[j] = np.array(img)
 
-                    temp_conv, temp_fc, prob = sess.run([pre_pool,
+                    _, temp_fc, _ = sess.run([pre_pool,
                                                          pre_logits_flatten,
                                                          probabilities],
                                                          feed_dict={input_batch:
                                                              current_batch})
-                    feat_conv.append(temp_conv)
-                    feat_fc.append(temp_fc)
-                    probs.append(prob)
+                    feat_fc.append(temp_fc.astype('float32'))
 
-        return np.concatenate(feat_conv, axis=0), np.concatenate(feat_fc, axis=0), np.concatenate(probs, axis=0)
+        return np.concatenate(feat_fc, axis=0)
 
+#                    temp_conv, temp_fc, prob = sess.run([pre_pool,
+#                                                         pre_logits_flatten,
+#                                                         probabilities],
+#                                                         feed_dict={input_batch:
+#                                                             current_batch})
+#                    feat_conv.append(temp_conv.astype('float32'))
+#                    feat_fc.append(temp_fc.astype('float32'))
+#                    probs.append(prob.astype('float32'))
+#
+#        return np.concatenate(feat_conv, axis=0), np.concatenate(feat_fc, axis=0), np.concatenate(probs, axis=0)
 
+    def create_video(self, session_id, frames_name):
+        """
+        Create video from list of images
+        reference: Vasili's codes
+        """
+
+        from video_overlay import ffmpeg_video_writer
+        output_path = self.cfg.video_root+session_id+'/aligned_video.mp4'
+        writer = ffmpeg_video_writer(output_path, [1280,720], [1280,720],fps=3)
+
+        for i in range(len(frames_name)):
+            print i
+            img = Image.open(frames_name[i]).convert("RGB")
+            writer.write_frame(np.array(img))
+
+        writer.close()
 
     def align_data(self):
 
@@ -281,8 +338,10 @@ class DataAlign(object):
             start_time, end_time = self.get_start_end(session_id)
 
             # extract video features
+            print "Align video..."
             frame_num = self.get_video(session_id, start_time, end_time)
 
+            print "Align sensor..."
             # get sensor data
             sensor_data = []
             sensor_data.append(self.get_accel(session_id, start_time, end_time))
@@ -296,12 +355,12 @@ class DataAlign(object):
             for i in range(len(sensor_data)):
                 data = sensor_data[i]
 
-                # smoothing (window size 101 is roughly 1/3 secs)
+                # smoothing (window size 35 is roughly 1/3 secs)
                 data = signal.medfilt(data.reshape(data.shape[0],-1), [101, 1])
 
                 # normalization
                 mu = np.mean(data, axis=0)
-                std = np.std(data, axis=0)
+                std = np.std(data, axis=0) + np.finfo(float).tiny
                 data = (data - mu) / std
 
                 # resampling, consistent number with video frames
