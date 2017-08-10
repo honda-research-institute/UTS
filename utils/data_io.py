@@ -12,8 +12,8 @@ class CreateDataset(object):
     def __init__(self, cfg):
         print "Loading Data..."
 
-        self.X, self.vid_X = load_data_list(cfg, cfg.train_session, cfg.modality_X)
-        self.Y, self.vid_Y = load_data_list(cfg, cfg.train_session, cfg.modality_Y)
+        self.X, self.vid_X = load_data_list(cfg, cfg.train_session, cfg.modality_X, cfg.X_feat)
+        self.Y, self.vid_Y = load_data_list(cfg, cfg.train_session, cfg.modality_Y, cfg.Y_feat)
         self.iter_mode = cfg.iter_mode
         self.modality_X = cfg.modality_X
         self.modality_Y = cfg.modality_Y
@@ -74,11 +74,11 @@ def save_feat(data, cfg, session_id, name=None):
             fout.create_dataset('feats', data=data, dtype='float32')
 
 
-def load_data(cfg, session_id, modality, name='feats'):
+def load_data(cfg, session_id, modality, name=None):
 
     if modality == 'can':
-        d = pkl.load(open(path.join(cfg.sensor_root, "{0}/{1}.pkl").format(session_id,name), 'r'))
-#            d = pkl.load(open(path.join(output_path, "lstm_feat_{0}.pkl").format(session_id), 'r'))
+        fin = h5py.File(path.join(cfg.sensor_root, "{0}/{1}.h5").format(session_id,name), 'r')
+        d = fin['feats'][:]
     
     if modality == 'camera':
         fin = h5py.File(path.join(cfg.video_root, "{0}/{1}.h5").format(session_id,name), 'r')
@@ -86,7 +86,7 @@ def load_data(cfg, session_id, modality, name='feats'):
 
     return d
 
-def load_data_list(cfg, session_list, modality, name='feats'):
+def load_data_list(cfg, session_list, modality, name=None):
 
     allsessions = []
     vid = []

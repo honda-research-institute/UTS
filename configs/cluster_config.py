@@ -16,8 +16,10 @@ class ClusterConfig(BaseConfig):
                 help='Is training phase.')
         self.parser.add_argument('--modality_X', type=str, default='camera',
                 help='Modality X: e.g. camera or can')
-        self.parser.add_argument('--feat_name', type=str, default='feats',
-                help='Feature name to use: feats | recon_camera')
+        self.parser.add_argument('--X_feat', type=str, default='feat_fc',
+                help='Feature name to use for modality X: feat_fc | recon_camera')
+        self.parser.add_argument('--Y_feat', type=str, default='feat',
+                help='Feature name to use for modality Y: feat | recon_can')
 
         self.parser.add_argument('--K', type=int, default=10, 
                 help='Number of clusters')
