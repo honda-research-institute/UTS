@@ -22,11 +22,13 @@ def main():
 
     if cfg.model == 'logistic':
         from models.logistic_regression import LGModel
-        model = LGModel()
-
+        model = LGModel(cfg.PCA_dim)
     elif cfg.model == 'svm':
         from models.svm import SVMModel
-        model = SVMModel()
+        model = SVMModel(cfg.PCA_dim)
+    elif cfg.model == 'knn':
+        from models.knn import KNNModel
+        model = KNNModel(cfg.PCA_dim, cfg.n_neighbors)
 
     else:
         raise NotImplementedError
@@ -49,11 +51,13 @@ def main():
         model.save_model(result_path) 
 
     # Testing stage
+    print "Testing..."
     if not model.feasibility:
         model.load_model(result_path)
 
     result = {}
     for session_id in cfg.test_session:
+        print session_id
         data = data_io.load_data(cfg, session_id, cfg.modality_X, cfg.X_feat)
         pred = model.predict(data)
         result[session_id] = pred

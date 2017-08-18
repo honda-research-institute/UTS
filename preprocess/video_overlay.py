@@ -20,7 +20,7 @@ import sys
 sys.path.append("../configs")
 from base_config import BaseConfig
 
-session_id = '201704151140'
+session_id = '201704150933'
 #session_id = '201704141145'
 
 output_size = [720, 480]

@@ -36,8 +36,11 @@ class TrainConfig(BaseConfig):
                 help='Modality X: e.g. camera or can')
         self.parser.add_argument('--modality_Y', type=str, default='can',
                 help='Modality Y: e.g. camera or can')
+
         self.parser.add_argument('--isTrain', action='store_true',
                 help='Is training phase.')
+        self.parser.add_argument('--continue_train', action='store_true',
+                help='Is continue training.')
         self.parser.add_argument('--snapshot_num', type=int, default=-1,
                 help='The model snapshot used for feature extraction, -1 for the latest model')
         self.parser.add_argument('--n_epochs', type=int, default=10,

@@ -4,19 +4,20 @@ import time
 import pdb
 import pickle as pkl
 
-from sklearn.svm import LinearSVC
+from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import mode
 from sklearn.decomposition import PCA
 
-class SVMModel():
+class KNNModel():
 
-    def __init__(self, PCA=-1):
+    def __init__(self, PCA=-1, n_neighbors=1):
         self.PCA = PCA
-        self.svm_model = None
+        self.knn_model = None
         self.pca_model = None
         self.feasibility = False    # flag for whether model is trained
         self.old2new = None
         self.new2old = None
+        self.n_neighbors = n_neighbors
 
     def train(self, X, label):
 
@@ -39,14 +40,15 @@ class SVMModel():
 
         self.old2new = old2new
         self.new2old = new2old
+        print old2new
         C = len(new2old.keys())
-        print ("Linear SVM: %d data samples with dim=%d and %d distinct labels" % 
+        print ("Logistic regression: %d data samples with dim=%d and %d distinct labels" % 
                 (X.shape[0], X.shape[1], C))
 
-        self.svm_model = LinearSVC()
-        self.svm_model.fit(X, label)
+        self.knn_model = KNeighborsClassifier(self.n_neighbors)
+        self.knn_model.fit(X, label)
         print ("Training done!")
-        print ("Training accuracy: %f" % self.svm_model.score(X, label))
+        print ("Training accuracy: %f" % self.knn_model.score(X, label))
 
         self.feasibility = True
 
@@ -54,28 +56,28 @@ class SVMModel():
     def save_model(self, output_path):
 
         # save the model
-        pkl.dump({'svm': self.svm_model,
+        pkl.dump({'knn': self.knn_model,
                 'pca': self.pca_model,
                 'new2old': self.new2old,
                 'old2new': self.old2new},
-                open(output_path+'svm_model.pkl', 'w'))
+                open(output_path+'knn_model.pkl', 'w'))
 
 
     def load_model(self, input_path):
 
         # load the model
-        fin = pkl.load(open(input_path+'svm_model.pkl', 'r'))
+        fin = pkl.load(open(input_path+'knn_model.pkl', 'r'))
 
-        self.kmeans_model = fin['svm']
+        self.kmeans_model = fin['knn']
         self.pca_model = fin['pca']
         self.new2old = fin['new2old']
         self.old2new = fin['old2new']
         self.feasibility = True
 
 
-    def predict(self, X):
+    def predict(self, X, prob=False):
         
-        if self.svm_model is None:
+        if self.knn_model is None:
             print "Error! You need to load a logistic regression model!"
             raise
 
@@ -86,9 +88,15 @@ class SVMModel():
         if self.PCA > 0:
             X = self.pca_model.transform(X)
 
-        result = self.svm_model.predict(X)
-        for i in range(len(result)):
-            result[i] = self.new2old[result[i]]
+        if prob:
+            temp_result = self.knn_model.predict_proba(X)
+            result = np.zeros(temp_result.shape)
+            for i in range(temp_result.shape[1]):
+                result[:, self.new2old[i]] = temp_result[i]
+        else:
+            result = self.knn_model.predict(X)
+            for i in range(len(result)):
+                result[i] = self.new2old[result[i]]
             
         return result
 

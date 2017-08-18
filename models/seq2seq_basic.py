@@ -56,6 +56,7 @@ class Seq2seqBasic(object):
         with tf.variable_scope('decoder'):
             decoder_cell = tf.contrib.rnn.LSTMCell(self.n_hidden, forget_bias=1.0)
 
+
         def loop_fn_initial():
             elements_finished = (-1 >= self.out_len)
             next_input = tf.zeros([self.batch_size, self.n_output], dtype=tf.float32)
@@ -111,6 +112,8 @@ class Seq2seqBasic(object):
         # define optimizer
         if self.optimizer_name == 'rmsprop':
             self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+        elif self.optimizer_name == 'adam':
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
         else:
             raise NotImplementedError
 

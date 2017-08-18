@@ -47,6 +47,7 @@ class LGModel():
         self.lg_model = LogisticRegression()
         self.lg_model.fit(X, label)
         print ("Training done!")
+        print ("Training accuracy: %f" % self.lg_model.score(X, label))
 
         self.feasibility = True
 

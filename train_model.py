@@ -43,12 +43,22 @@ def main():
             sess.run(init)
             saver = tf.train.Saver()
 
+            epoch_start = 1
+            if cfg.continue_train:
+                latest_checkpoint = tf.train.latest_checkpoint(result_path)
+                print "Loading pretrained model %s" % latest_checkpoint
+                saver.restore(sess, latest_checkpoint)
+
+                # set epoch start index
+                epoch_start = int(latest_checkpoint.split('-')[-1]) + 1
+
+
             if not cfg.silent_mode:
                 iters = cfg.n_epochs * (dataset.N // cfg.batch_size) * cfg.batch_size
                 pbar = tqdm(total=iters, dynamic_ncols=True)
     
             event_timer = 0
-            for epoch in range(1, cfg.n_epochs+1):
+            for epoch in range(epoch_start, cfg.n_epochs+1):
     
                 iterator = dataset.get_iterator()    # reinitialize iterator
                 for batch in iterator:
