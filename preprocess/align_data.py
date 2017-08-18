@@ -320,7 +320,7 @@ class DataAlign(object):
         reference: Vasili's codes
         """
 
-        from video_overlay import ffmpeg_video_writer
+        from video_writer import ffmpeg_video_writer
         output_path = self.cfg.video_root+session_id+'/aligned_video.mp4'
         writer = ffmpeg_video_writer(output_path, [1280,720], [1280,720],fps=3)
 
@@ -339,7 +339,10 @@ class DataAlign(object):
 
             # extract video features
             print "Align video..."
-            frame_num = self.get_video(session_id, start_time, end_time)
+            #frame_num = self.get_video(session_id, start_time, end_time)
+            d = h5py.File(os.path.join(self.cfg.video_root, session_id+'/feat_fc.h5'),'r')
+            d = d['feats'][:]
+            frame_num = d.shape[0]
 
             print "Align sensor..."
             # get sensor data

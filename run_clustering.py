@@ -31,7 +31,7 @@ def main():
         
             # load data
             print ("Loading data ...")
-            data, _ = data_io.load_data_list(cfg, cfg.train_session, cfg.modality_X, cfg.feat_name)
+            data, _ = data_io.load_data_list(cfg, cfg.train_session, cfg.modality_X, cfg.X_feat)
 
             model.train(data, cfg.K)
             model.save_model(result_path) 
@@ -43,7 +43,7 @@ def main():
         result = {}
         result_seg = {}
         for session_id in cfg.test_session:
-            data = data_io.load_data(cfg, session_id, cfg.modality_X, cfg.feat_name)
+            data = data_io.load_data(cfg, session_id, cfg.modality_X, cfg.X_feat)
             result[session_id] = model.predict(data)
             s, G = convert_seg(result[session_id])
             result_seg[session_id] = {}
@@ -61,7 +61,8 @@ def main():
         result = {}
         result_seg = {}
         for session_id in cfg.test_session:
-            data = data_io.load_data(cfg, session_id, cfg.modality_X, cfg.feat_name)
+            print "Session id: " + session_id
+            data = data_io.load_data(cfg, session_id, cfg.modality_X, cfg.X_feat)
             cps, label = model.train_and_predict(data, cfg.m)
 
             _, G = convert_seg(label)

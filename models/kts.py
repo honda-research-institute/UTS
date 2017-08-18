@@ -8,6 +8,7 @@ import pickle as pkl
 from sklearn.decomposition import PCA
 sys.path.append('3rd-party/kts/')
 from cpd_auto import cpd_auto
+from cpd_nonlin import cpd_nonlin
 
 
 class KTSModel():
@@ -75,7 +76,8 @@ class KTSModel():
                     np.sum(self.pca_model.explained_variance_ratio_))
 
         K = np.dot(X, X.T)
-        cps, _ = cpd_auto(K, 2*m, 1) 
+        #cps, _ = cpd_auto(K, 2*m, 1) 
+        cps, _ = cpd_nonlin(K, m, 1) 
 
         if self.is_clustered:
 
@@ -99,7 +101,7 @@ class KTSModel():
 
             label = None
             if self.cluster_method.lower() == 'kmeans':
-                from models.kmeans import KMeansModel
+                from .kmeans import KMeansModel
 
                 self.kts_model = KMeansModel()
                 label = self.kts_model.train_and_predict(new_X, self.K)

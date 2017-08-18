@@ -44,3 +44,6 @@ class TrainConfig(BaseConfig):
                 help='Number of epochs for training')
         self.parser.add_argument('--iter_mode', type=str, default='recon',
                 help='Iteration mode: recon | pred')
+        self.parser.add_argument('--gpu', type=str, default=None,
+                help='Set CUDA_VISIBLE_DEVICES')
+

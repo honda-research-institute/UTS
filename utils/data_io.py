@@ -31,7 +31,7 @@ class CreateDataset(object):
         if self.iter_mode == 'recon':
             iterator = utils.recon_minibatch(self.X, self.vid_X, self.Y, 
                     self.batch_size, self.max_time, self.shuffle, self.reverse)
-        if self.iter_mode == 'pred':
+        elif self.iter_mode == 'pred':
             iterator = utils.pred_minibatch(self.X, self.vid_X, self.Y, 
                     self.batch_size, self.max_time, self.n_predict, self.shuffle)
         else:
@@ -67,7 +67,8 @@ def save_feat(data, cfg, session_id, name=None):
         name = cfg.name
 
     if cfg.modality_X == 'can':
-        pkl.dump(data, open(path.join(cfg.sensor_root, "{0}/{1}.pkl").format(session_id, name), 'w'))
+        with h5py.File(path.join(cfg.sensor_root, "{0}/{1}.h5").format(session_id, name), 'w') as fout:
+            fout.create_dataset('feats', data=data, dtype='float32')
     
     if cfg.modality_X == 'camera':
         with h5py.File(path.join(cfg.video_root, "{0}/{1}.h5").format(session_id, name), 'w') as fout:
@@ -100,4 +101,16 @@ def load_data_list(cfg, session_list, modality, name=None):
     vid = np.hstack(vid)
 
     return data, vid
+
+def load_annotation_list(cfg, session_list):
+
+    allsessions = []
+
+    for i, session_id in enumerate(session_list):
+        label = pkl.load(open(path.join(cfg.annotation_root, "{}/annotations.pkl".format(session_id)), 'r'))
+        allsessions.append(label)
+
+    annotation = np.concatenate(allsessions, axis=0)
+
+    return annotation
 

@@ -20,6 +20,11 @@ def main():
     cfg = TrainConfig().parse()
     print cfg.name
 
+    if cfg.gpu:
+        os.environ['CUDA_VISIBLE_DEVICES'] = cfg.gpu
+    else:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
     model = create_model(cfg)
     model.print_config()
 
@@ -29,7 +34,9 @@ def main():
         dataset = CreateDataset(cfg)
         dataset.print_config()
 
-        with tf.Session() as sess:
+        gpu_options = tf.GPUOptions(allow_growth=True)
+        config = tf.ConfigProto(gpu_options=gpu_options)
+        with tf.Session(config=config) as sess:
     
             init = tf.global_variables_initializer()
             writer = tf.summary.FileWriter(result_path, sess.graph)
@@ -78,17 +85,16 @@ def main():
             else:
                 raise NotImplementedError
     
-            for session_id in cfg.test_session:
+            for session_id in cfg.train_session:   # extract feature for all sessions
                 print "Session: ", session_id
-                x = load_data(cfg, session_id, cfg.modality_X)
+                x = load_data(cfg, session_id, cfg.modality_X, cfg.X_feat)
     
                 feat = []
                 for batch in iterate_minibatch(x, cfg.batch_size, cfg.max_time, shuffle=False):
                     feat_batch = sess.run(model.feat, feed_dict={
                                     model.x: batch['x_batch'],
                                     model.in_len: batch['seq_batch']})
-                    feat.append(feat_batch[seq_batch > 0, :])
-    
+                    feat.append(feat_batch[batch['seq_batch'] > 0, :])
     
                 new_feat = np.vstack(feat)
     

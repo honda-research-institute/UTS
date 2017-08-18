@@ -58,7 +58,6 @@ def main():
         # transfer the confusion matrix according to matching result
         C = C0.dot( P.T )
     
-        pdb.set_trace()
         if cfg.save_result:
             # save transformed result
             label_map = {}

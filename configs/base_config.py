@@ -11,11 +11,16 @@ class BaseConfig(object):
         self.parser.add_argument('--name', type=str, default='debug',
                         help='name of this experiment')
         self.parser.add_argument('--train_session', type=str, default='all',
-                help='session id list for training, e.g. 201704151140,201704141145, use "all" for all sessions')
+                help='session id list for training, e.g. 201704151140,201704141145, use "all" for all sessions, or input txt file name for specific sessions')
         self.parser.add_argument('--test_session', type=str, default='all',
                 help='session id list for test, e.g. 201704151140,201704141145, use "all" for all sessions')
         self.parser.add_argument('--silent_mode', action='store_true',
                 help='Silent mode, no printing')
+
+        self.parser.add_argument('--X_feat', type=str, default='feat_fc',
+                help='Feature name to use for modality X: feat_fc | recon_camera')
+        self.parser.add_argument('--Y_feat', type=str, default='feat',
+                help='Feature name to use for modality Y: feat | recon_can')
 
     def parse(self):
         args = self.parser.parse_args()
