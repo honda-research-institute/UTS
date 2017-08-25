@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tqdm import tqdm
 import numpy as np
+from tensorflow.python.ops.rnn import _transpose_batch_time
 
 '''
 Sequence-to-sequence LSTM for history reconstruction / future prediction
@@ -20,6 +21,7 @@ class Seq2seqBasic(object):
         self.n_hidden = kwargs.get('n_hidden', cfg.n_hidden)
         self.learning_rate = kwargs.get('learning_rate', cfg.learning_rate)
         self.optimizer_name = kwargs.get('optimizer', cfg.optimizer)
+        self.is_conditioned = kwargs.get('is_conditioned', cfg.is_conditioned)
 
         if self.n_output == 0:
             self.n_output = self.input
@@ -57,57 +59,35 @@ class Seq2seqBasic(object):
             decoder_cell = tf.contrib.rnn.LSTMCell(self.n_hidden, forget_bias=1.0)
 
 
-        def loop_fn_initial():
-            elements_finished = (-1 >= self.out_len)
-            next_input = tf.zeros([self.batch_size, self.n_output], dtype=tf.float32)
-            next_cell_state = self.encoder_final_state
-            emit_output = None
+        is_conditioned = tf.constant(self.is_conditioned, dtype=tf.bool)
+        def loop_fn(time, cell_output, cell_state, loop_state):
+            emit_output = cell_output
+
+            if cell_state is None:
+                next_input = tf.zeros([self.batch_size, self.n_output], dtype=tf.float32)
+                next_cell_state = self.encoder_final_state
+            else:
+                next_cell_state = cell_state
+                next_input = tf.cond(is_conditioned,
+                                lambda: tf.matmul(cell_output, self.W_ho) + self.b_o,    # conditioned on previous output
+                                lambda: tf.zeros([self.batch_size, self.n_output], dtype=tf.float32))    # otherwise, empty input
+
+            elements_finished = (time >= self.out_len)
             next_loop_state = None
 
             return (elements_finished, next_input, next_cell_state,
                     emit_output, next_loop_state)
 
-        def loop_fn_transition(time, cell_output, cell_state, loop_state):
-
-            def linear_fc():
-                return tf.matmul(cell_output, self.W_ho) + self.b_o
-
-            emit_output = cell_output
-            next_cell_state = cell_state
-
-            elements_finished = (time >= self.out_len)
-            finished = tf.reduce_all(elements_finished)
-
-            next_input = tf.cond(
-                    finished,
-                    lambda: tf.zeros([self.batch_size, self.n_output], dtype=tf.float32),
-                    linear_fc)
-            next_loop_state=None
-
-            return (elements_finished, next_input, next_cell_state,
-                    emit_output, next_loop_state)
-
-        def loop_fn(time, cell_output, cell_state, loop_state):
-            if cell_state is None:
-                return loop_fn_initial()
-            else:
-                return loop_fn_transition(time, cell_output, cell_state, loop_state)
-
         outputs_ta, final_state, _ = tf.nn.raw_rnn(decoder_cell, loop_fn, scope='decoder')
 
-        # fully connected layer to get the output
-        pred = tf.TensorArray(dtype=tf.float32, size=self.n_predict)
-        for t in range(self.n_predict):
-            time = tf.constant(t, dtype=tf.int32)
-            output = outputs_ta.read(time)
-            pred = pred.write(time, tf.matmul(output, self.W_ho) + self.b_o)
-            time += 1
-        self.pred = pred.stack()
+        # fully connected layer to get the prediction 
+        outputs = _transpose_batch_time(outputs_ta.stack())    # outputs and shape [batch_size, time ,input_dim] !!!!!! bug is here !!!!!!!!!!1
+        self.pred = tf.matmul(tf.reshape(outputs, (self.batch_size*self.n_predict, self.n_hidden)), self.W_ho) + self.b_o
 
         # define loss
         self.loss = tf.losses.mean_squared_error(
                 tf.reshape(self.y, (self.batch_size*self.n_predict, self.n_output)),
-                tf.reshape(self.pred, (self.batch_size*self.n_predict, self.n_output)))
+                self.pred)
 
         # define optimizer
         if self.optimizer_name == 'rmsprop':
@@ -127,6 +107,7 @@ class Seq2seqBasic(object):
         print "n_input: ", self.n_input
         print "n_output: ", self.n_output
         print "n_hidden: ", self.n_hidden
+        print "is_conditioned: ", self.is_conditioned
 
         print "learning_rate: ", self.learning_rate
         print "optimizer: ", self.optimizer_name

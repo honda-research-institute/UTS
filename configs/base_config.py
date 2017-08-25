@@ -13,7 +13,7 @@ class BaseConfig(object):
         self.parser.add_argument('--train_session', type=str, default='all',
                 help='session id list for training, e.g. 201704151140,201704141145, use "all" for all sessions, or input txt file name for specific sessions')
         self.parser.add_argument('--test_session', type=str, default='all',
-                help='session id list for test, e.g. 201704151140,201704141145, use "all" for all sessions')
+                help='session id list for test, e.g. 201704151140,201704141145, use "all" for all sessions, or input txt file name for specific sessions')
         self.parser.add_argument('--silent_mode', action='store_true',
                 help='Silent mode, no printing')
 
@@ -39,8 +39,12 @@ class BaseConfig(object):
             args.train_session = load_session_list(os.path.join(args.DATA_ROOT, args.train_session))
         else:
             args.train_session = args.train_session.split(',')
+
         if args.test_session == 'all':
-            args.test_session = load_session_list(os.path.join(args.DATA_ROOT, 'test_session.txt'))
+            args.test_session = load_session_list(os.path.join(args.DATA_ROOT, 'train_session.txt'))
+            args.test_session += load_session_list(os.path.join(args.DATA_ROOT, 'test_session.txt'))
+        elif args.test_session[-3:] == 'txt':
+            args.test_session = load_session_list(os.path.join(args.DATA_ROOT, args.test_session))
         else:
             args.test_session = args.test_session.split(',')
 

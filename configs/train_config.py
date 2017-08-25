@@ -36,6 +36,8 @@ class TrainConfig(BaseConfig):
                 help='Modality X: e.g. camera or can')
         self.parser.add_argument('--modality_Y', type=str, default='can',
                 help='Modality Y: e.g. camera or can')
+        self.parser.add_argument('--is_conditioned', action='store_true',
+                help='if specified, use Conditional decoder.')
 
         self.parser.add_argument('--isTrain', action='store_true',
                 help='Is training phase.')
