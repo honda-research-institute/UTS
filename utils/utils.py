@@ -1,4 +1,48 @@
 import numpy as np
+from sklearn.metrics import average_precision_score
+import tensorflow as tf
+from tensorflow.python.ops import math_ops, array_ops
+
+def focal_loss(labels, logits, alpha=0.25, gamma=2.):
+    probs = tf.nn.softmax(logits)
+    probs.get_shape().assert_is_compatible_with(labels.get_shape())
+
+    epsilon=1e-8
+    preds = array_ops.where(
+            math_ops.equal(labels, 1), probs, 1. - probs)
+    losses = -alpha * (1. - preds)**gamma * math_ops.log(preds + epsilon)
+    
+    return tf.reduce_mean(losses)
+
+
+def apcal(label, score):
+    assert (label.shape == score.shape)
+    idx = np.argsort(-score)
+    noright = 0.
+    apsum = 0.
+    for i in range(len(idx)):
+        if label[idx[i]] == 1:
+            noright += 1
+            apsum += noright / (i+1)
+
+    return apsum / label.sum()
+
+def compute_framelevel_ap(label, pred, background=True):
+    assert (label.shape == pred.shape)
+    ap = []
+    # whether prediction contains bakground (assume background indexed 0)
+    if background:
+        pred = pred[:, 1:]
+        label = label[:, 1:]
+
+    for i in range(0, pred.shape[1]):
+        if label[:, i].sum() > 0:
+            ap.append((i, apcal(label[:,i], pred[:,i])))
+        #ap.append(average_precision_score(label[:,i], pred[:,i]))
+
+    mAP = np.mean(np.asarray([a[1] for a in ap]))
+    return mAP, ap
+
 
 def iterate_minibatch(x, batch_size=0, n_steps=0, shuffle=False):
     """

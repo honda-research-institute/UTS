@@ -1,108 +1,96 @@
-import pickle
+import pickle as pkl
+import h5py
 import os
 import numpy as np
 import argparse
-import pdb
 import time
-import sys
+import pdb
+from sklearn.metrics import average_precision_score
 
-from configs.evaluate_config import EvaluateConfig
-from utils.utils import convert_seg, genConMatrix
-
+from configs.retrieval_config import RetrievalConfig
 
 def main():
+    cfg = RetrievalConfig().parse()
 
-    cfg = EvaluateConfig().parse()
+    fin = pkl.load(open(os.path.join(cfg.result_root, 'result_'+cfg.name+'.pkl'), 'r'))
+    result = fin['result']
+    label_target = fin['label_target']
+    num2label = pkl.load(open(os.path.join(cfg.annotation_root, 'num2label.pkl'), 'r'))
+    event = result[0][1]
 
-    # load result file
-    if cfg.result_path is None:
-        result_path = os.path.join(cfg.result_root, cfg.name+'/result.pkl')
-    else:
-        result_path = cfg.result_path
-    result_dict = pickle.load(open(result_path, 'r'))
-    
-    if cfg.save_result:
-        new_result_dict = {}
-        new_seg_dict = {}
-    
-    for test_id in result_dict.keys():
-        if not cfg.silent_mode:
-            print "Evaluating ", test_id
+    # database statistics
+    print ("%d target videos in database" % label_target.shape[0])
+    for key in num2label[event]:
+        print ("%d %s: count=%d, ratio=%f" % (key, num2label[event][key], 
+            np.sum(label_target==key), np.mean(label_target==key)))
 
-        # load annotation file
-        gt_path = os.path.join(cfg.annotation_root, test_id+'/annotations.pkl')
-        gt = pickle.load(open(gt_path ,'r'))
-        #temporary operation, join two labels
-        gt = np.max(gt, axis=1)
-    
-        result = result_dict[test_id]
-    
-        # compute the confusion matrix
-        C0 = genConMatrix(gt, result)
-    
-        # run hungarian algorithm (maximum assignment problem
-        sys.path.append(cfg.UTS_ROOT+'3rd-party/hungarian-algorithm')
-        from hungarian import Hungarian
-    
-        h = Hungarian(C0.tolist(), is_profit_matrix=True)
-        h.calculate()
-    
-        ass = h.get_results()
-        P = np.zeros((np.max(gt)+1, np.max(result)+1), dtype='int')
-        for i in range(len(ass)):
-            P[ass[i][0], ass[i][1]] = 1
+    mAP = {}
+    mean_ap = 0
+    count = 0
+    for i in range(len(result)):
+        dist = result[i][4]
+        g = result[i][3]
 
-        if not cfg.silent_mode:
-            print P
-    
-        # transfer the confusion matrix according to matching result
-        C = C0.dot( P.T )
-    
-        if cfg.save_result:
-            # save transformed result
-            label_map = {}
-            for i in range(len(ass)):
-                label_map[ass[i][1]] = ass[i][0]
-    
-            for i in range(len(result)):
-                result[i] = label_map[result[i]]
+        score = np.max(dist) - dist
+        if np.sum(label_target==g) == 0:    # actually should not happen because they are not saved
+            print "Warning ap =0!"
+            ap = 0
+        else:
+            ap = average_precision_score(np.squeeze(label_target==g), np.squeeze(score))
+        mean_ap += ap
+        count += 1
 
-            new_result_dict[test_id] = result
-            s, G = convert_seg(result)
-            new_seg_dict[test_id] = {}
-            new_seg_dict[test_id]['s'] = s
-            new_seg_dict[test_id]['G'] = G
-    
-    
-        # Evaluation
-        f1 = []
-        for i in range(C.shape[0]):
-            c = C[i]
-            if c[i] == 0:
-                f1.append(0)
-            else:
-                precision = float(c[i]) / np.sum(C[:,i])
-                recall = float(c[i]) / np.sum(c)
-                f1.append(2*precision*recall / (precision+recall))
-    
-        if not cfg.silent_mode:
-            print "Avg F1-score: %f" % np.mean(np.vstack(f1))
-            print "F1-score:"
-            print f1
+        if g in mAP:
+            mAP[g]['ap'] += ap
+            mAP[g]['count'] += 1
+        else:
+            mAP[g] = {'ap':ap, 'count':1}
 
-    if cfg.save_result:
-        pickle.dump(new_result_dict, open(result_path.replace('.pkl', '_hungarian.pkl'),'w'))
-        pickle.dump(new_seg_dict, open(result_path.replace('.pkl', '_seg_hungarian.pkl'),'w'))
-    
-    #    # calculate accuracy
-    #    C1 = C.astype(float)
-    #    C1 /= np.sum(C1)
-    #    acc = np.trace(C1)
-    #    print "Acc: ", acc
-    
+    print ("Mean AP = %f" % (mean_ap / count))
+    new_mAP = 0
+    for key in mAP:
+        label = num2label[event][key]
+        ap = mAP[key]['ap'] / mAP[key]['count']
+        new_mAP += ap
 
+        print ("%d %s: mAP = %f, query count=%d" % (key, label, ap, mAP[key]['count']))
+        print ("Random mAP = %f" % average_precision_score(np.squeeze(label_target==key), np.squeeze(np.random.rand(label_target.shape[0]))))
+    print ("Non-weighted mAP: ", new_mAP/len(mAP.keys()))
 
+    ######## Precision @ top k #########
+    top = 10
 
+    mAP = {}
+    mean_ap = 0
+    count = 0
+    for i in range(len(result)):
+        dist = result[i][4]
+        idx = np.argsort(dist)
+        dist = dist[idx[:top]]
+        l = label_target[idx[:top]]
+
+        score = np.max(dist) - dist
+        g = result[i][3]
+
+        if np.sum(l==g) == 0:
+            ap = 0
+        else:
+            ap = np.sum(np.squeeze(l==g)) / float(top)
+        mean_ap += ap
+        count += 1
+
+        if g in mAP:
+            mAP[g]['ap'] += ap
+            mAP[g]['count'] += 1
+        else:
+            mAP[g] = {'ap':ap, 'count':1}
+
+    print ("Mean Precision @ %d = %f" % (top, (mean_ap / count)))
+    for key in mAP:
+        label = num2label[event][key]
+        ap = mAP[key]['ap'] / mAP[key]['count']
+
+        print ("%d %s: P@%d = %f, query count=%d" % (key, label, top, ap, mAP[key]['count']))
 
 if __name__ == '__main__':
     main()

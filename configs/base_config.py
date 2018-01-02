@@ -10,39 +10,57 @@ class BaseConfig(object):
 
         self.parser.add_argument('--name', type=str, default='debug',
                         help='name of this experiment')
+        self.parser.add_argument('--all_session', type=str, default='all',
+                help='session id list for all sessions, e.g. 201704151140,201704141145, use "all" for all sessions, or input txt file name for specific sessions')
         self.parser.add_argument('--train_session', type=str, default='all',
                 help='session id list for training, e.g. 201704151140,201704141145, use "all" for all sessions, or input txt file name for specific sessions')
+        self.parser.add_argument('--val_session', type=str, default='all',
+                help='session id list for validation, e.g. 201704151140,201704141145, use "all" for all sessions, or input txt file name for specific sessions')
         self.parser.add_argument('--test_session', type=str, default='all',
                 help='session id list for test, e.g. 201704151140,201704141145, use "all" for all sessions, or input txt file name for specific sessions')
         self.parser.add_argument('--silent_mode', action='store_true',
                 help='Silent mode, no printing')
 
-        self.parser.add_argument('--X_feat', type=str, default='feat_fc',
-                help='Feature name to use for modality X: feat_fc | recon_camera')
-        self.parser.add_argument('--Y_feat', type=str, default='feat',
-                help='Feature name to use for modality Y: feat | recon_can')
+        self.parser.add_argument('--X_feat', type=str, default='feat_conv',
+                help='Feature name to use for modality X: feat_fc | feat_conv')
+        self.parser.add_argument('--Y_feat', type=str, default='feat_norm',
+                help='Feature name to use for modality Y: feat_norm')
 
     def parse(self):
         args = self.parser.parse_args()
 
-        args.UTS_ROOT = '/home/xyang/UTS/'
-        args.DATA_ROOT = '/home/xyang/UTS/Data'
+        args.ROOT = '/home/xyang/driving_event_retrieval'
+        args.DATA_ROOT = '/home/xyang/driving_event_retrieval/Data/'
+#        args.DATA_ROOT = '/mnt/data/honda_data_old/'
         
         args.video_root = os.path.join(args.DATA_ROOT, 'camera/')
         args.sensor_root = os.path.join(args.DATA_ROOT, 'sensor/')
         args.annotation_root = os.path.join(args.DATA_ROOT, 'annotation/')
-        args.result_root = os.path.join(args.DATA_ROOT, 'result/')
+        args.result_root = os.path.join(args.DATA_ROOT, 'results/')
+
+        if args.all_session == 'all':
+            args.all_session = load_session_list(os.path.join(args.DATA_ROOT, 'all_session.txt'))
+        elif args.all_session[-3:] == 'txt':
+            args.all_session = load_session_list(os.path.join(args.DATA_ROOT, args.all_session))
+        else:
+            args.all_session = args.all_session.split(',')
 
         if args.train_session == 'all':
-            args.train_session = load_session_list(os.path.join(args.DATA_ROOT, 'session_list.txt'))
+            args.train_session = load_session_list(os.path.join(args.DATA_ROOT, 'train_session.txt'))
         elif args.train_session[-3:] == 'txt':
             args.train_session = load_session_list(os.path.join(args.DATA_ROOT, args.train_session))
         else:
             args.train_session = args.train_session.split(',')
 
+        if args.val_session == 'all':
+            args.val_session = load_session_list(os.path.join(args.DATA_ROOT, 'val_session.txt'))
+        elif args.val_session[-3:] == 'txt':
+            args.val_session = load_session_list(os.path.join(args.DATA_ROOT, args.val_session))
+        else:
+            args.val_session = args.val_session.split(',')
+
         if args.test_session == 'all':
-            args.test_session = load_session_list(os.path.join(args.DATA_ROOT, 'train_session.txt'))
-            args.test_session += load_session_list(os.path.join(args.DATA_ROOT, 'test_session.txt'))
+            args.test_session = load_session_list(os.path.join(args.DATA_ROOT, 'test_session.txt'))
         elif args.test_session[-3:] == 'txt':
             args.test_session = load_session_list(os.path.join(args.DATA_ROOT, args.test_session))
         else:

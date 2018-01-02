@@ -5,9 +5,9 @@ Default configurations for model training
 from base_config import BaseConfig
 import argparse
 
-class TrainConfig(BaseConfig):
+class ConvLSTMConfig(BaseConfig):
     def __init__(self):
-        super(TrainConfig, self).__init__()
+        super(ConvLSTMConfig, self).__init__()
 
         self.parser.add_argument('--event', type=int, default=1,
                        help='which event')
@@ -15,10 +15,6 @@ class TrainConfig(BaseConfig):
                 help='sampling strategy: eg. random| uniform')
         self.parser.add_argument('--is_classify', action='store_true',
                 help='if specify, use cross entropy loss.')
-        self.parser.add_argument('--focal_loss', action='store_true',
-                help='if specify, use focal loss.')
-        self.parser.add_argument('--trimmed', action='store_true',
-                help='if specify, remove pure background sequences.')
         self.parser.add_argument('--margin', type=float, default=1.,
                        help='margin')
         self.parser.add_argument('--cluster_name', type=str, default=None,
@@ -28,8 +24,6 @@ class TrainConfig(BaseConfig):
                        help='input_keep_prob')
         self.parser.add_argument('--output_keep_prob', type=float, default=1.,
                        help='output_keep_prob')
-        self.parser.add_argument('--beta_l2', type=float, default=0.001,
-                       help='L2 regularization')
         self.parser.add_argument('--n_threads', type=int, default=1,
                        help='number of threads for loading data in parallel')
         self.parser.add_argument('--buffer_size', type=int, default=10,
@@ -67,10 +61,6 @@ class TrainConfig(BaseConfig):
                 help='if specified, use Conditional decoder.')
         self.parser.add_argument('--data_mode', type=str, default='pool',
                 help='Data mode for dealing with sensor data: pool | next')
-        self.parser.add_argument('--model_type', type=str, default='convlstm',
-                help='Model type')
-        self.parser.add_argument('--keep_background', type=float, default=1.,
-                       help='keep_background')
 
 
         self.parser.add_argument('--isTrain', action='store_true',
